@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	. "v5sdk_go/ws/wImpl"
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/ws/wImpl"
 )
 
 func PrintDetail(d *ProcessDetail) {

@@ -10,9 +10,10 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
-	. "v5sdk_go/config"
-	. "v5sdk_go/utils"
-	. "v5sdk_go/ws/wImpl"
+
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/config"
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/utils"
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/ws/wImpl"
 
 	"github.com/gorilla/websocket"
 )
@@ -660,7 +661,7 @@ func (a *WsClient) Stop() error {
 	}
 
 	a.isStarted = false
-	
+
 	if a.conn != nil {
 		a.conn.Close()
 	}
