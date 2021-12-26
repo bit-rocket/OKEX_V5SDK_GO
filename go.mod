@@ -1,4 +1,4 @@
-module github.com/bit-rocket/OKEX_V5SDK_GO
+module github.com/bit-rocket/v5sdk_go
 
 go 1.15
 
