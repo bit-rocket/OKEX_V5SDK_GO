@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 	"time"
-	. "v5sdk_go/rest"
-	. "v5sdk_go/ws"
+
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/rest"
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/ws"
 )
 
 /*

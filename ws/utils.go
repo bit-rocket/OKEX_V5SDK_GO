@@ -4,8 +4,8 @@ import (
 	"errors"
 	"log"
 	"runtime/debug"
-	. "v5sdk_go/ws/wImpl"
-	. "v5sdk_go/ws/wInterface"
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/ws/wImpl"
+	. "github.com/bit-rocket/OKEX_V5SDK_GO/ws/wInterface"
 )
 
 // 判断返回结果成功失败
