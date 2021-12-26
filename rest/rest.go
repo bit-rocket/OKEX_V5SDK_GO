@@ -46,9 +46,9 @@ type RESTAPIResult struct {
 }
 
 type Okexv5APIResponse struct {
-	Code string                   `json:"code"`
-	Msg  string                   `json:"msg"`
-	Data []map[string]interface{} `json:"data"`
+	Code string        `json:"code"`
+	Msg  string        `json:"msg"`
+	Data []interface{} `json:"data"`
 }
 
 /*
@@ -215,6 +215,7 @@ func (this *RESTAPI) Run(ctx context.Context) (res *RESTAPIResult, err error) {
 	}
 
 	res.Body = string(resBuff)
+	fmt.Printf("get response body string:%s", res.Body)
 	res.Code = resp.StatusCode
 
 	// 解析结果
