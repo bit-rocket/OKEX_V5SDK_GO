@@ -215,7 +215,6 @@ func (this *RESTAPI) Run(ctx context.Context) (res *RESTAPIResult, err error) {
 	}
 
 	res.Body = string(resBuff)
-	fmt.Printf("get response body string:%s", res.Body)
 	res.Code = resp.StatusCode
 
 	// 解析结果
