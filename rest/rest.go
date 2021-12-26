@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,9 +47,121 @@ type RESTAPIResult struct {
 }
 
 type Okexv5APIResponse struct {
-	Code string                   `json:"code"`
-	Msg  string                   `json:"msg"`
-	Data []map[string]interface{} `json:"data"`
+	Code string        `json:"code"`
+	Msg  string        `json:"msg"`
+	Data []interface{} `json:"data"`
+}
+
+type BalanceDetailItem struct {
+	Ccy          string `json:"ccy"`
+	AvailBalStr  string `json:"availBal"`
+	CashBalStr   string `json:"cashBal"`
+	FrozenBalStr string `json:"frozenBal"`
+	AvailEqStr   string `json:"availEq"`
+
+	AvailBal  float64
+	CashBal   float64
+	FrozenBal float64
+	AvailEq   float64
+}
+
+type BalanceItem struct {
+	AdjEqStr string              `json:"adjEq"`
+	Details  []BalanceDetailItem `json:"details"`
+	UtimeStr string              `json:"uTime"`
+
+	Utime int64
+	AdjEq float64
+}
+
+type OkexV5Balance struct {
+	Code string        `json:"code"`
+	Msg  string        `json:"msg"`
+	Data []BalanceItem `json:"data"`
+}
+
+type OrderInfo struct {
+	AccFillSz string `json:"accFillSz"`
+	FeeCcy    string `json:"feeCcy"`
+	InstId    string `json:"instId"`
+	InstType  string `json:"instType"`
+	OrdId     string `json:"ordId"`
+	Side      string `json:"side"`
+	Px        string `json:"px"`
+	Sz        string `json:"sz"`
+}
+
+type OkexV5PendingOrder struct {
+	Code string      `json:"code"`
+	Msg  string      `json:"msg"`
+	Data []OrderInfo `json:"data"`
+}
+
+func (bdi *BalanceDetailItem) StrConv() error {
+	availBal, err := parseFloat(bdi.AvailBalStr)
+	if err != nil {
+		return fmt.Errorf("parse detail item avail Bal %s error:%s", bdi.AvailBalStr, err.Error())
+	}
+	bdi.AvailBal = availBal
+
+	availEq, err := parseFloat(bdi.AvailEqStr)
+	if err != nil {
+		return fmt.Errorf("parse detail item avail Eq %s error:%s", bdi.AvailEqStr, err.Error())
+	}
+	bdi.AvailEq = availEq
+
+	cashBal, err := parseFloat(bdi.CashBalStr)
+	if err != nil {
+		return fmt.Errorf("parse detail item cash Bal %s error:%s", bdi.CashBalStr, err.Error())
+	}
+	bdi.CashBal = cashBal
+
+	frozenBal, err := parseFloat(bdi.FrozenBalStr)
+	if err != nil {
+		return fmt.Errorf("parse detail item frozen Bal %s error:%s", bdi.FrozenBalStr, err.Error())
+	}
+	bdi.FrozenBal = frozenBal
+	return nil
+}
+
+func (ob *OkexV5Balance) StrConv() error {
+	for idx, _ := range ob.Data {
+		if err := ob.Data[idx].StrConv(); err != nil {
+			return fmt.Errorf("okex v5 balance result strconv idx %d, error:%s",
+				idx, err.Error())
+		}
+	}
+	return nil
+}
+
+func (bi *BalanceItem) StrConv() error {
+	utime, err := strconv.ParseInt(bi.UtimeStr, 10, 64)
+	if err != nil {
+		return err
+	}
+	bi.Utime = utime
+
+	adjEq, err := parseFloat(bi.AdjEqStr)
+	if err != nil {
+		ewrap := fmt.Errorf("parse adjEq float error:%s", err.Error())
+		return ewrap
+	}
+	bi.AdjEq = adjEq
+
+	for idx, _ := range bi.Details {
+		if err := bi.Details[idx].StrConv(); err != nil {
+			ewrap := fmt.Errorf("parse idx %d of details error:%s", err.Error())
+			return ewrap
+		}
+	}
+	return nil
+}
+
+func parseFloat(fstr string) (float64, error) {
+	if fstr == "" {
+		return 0.0, nil
+	}
+	return strconv.ParseFloat(fstr, 64)
 }
 
 /*
@@ -198,7 +311,7 @@ func (this *RESTAPI) Run(ctx context.Context) (res *RESTAPIResult, err error) {
 	headStr := this.SetHeaders(req, timestamp, sign)
 	res.Header = headStr
 
-	this.PrintRequest(req, body, preHash)
+	// this.PrintRequest(req, body, preHash)
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("请求失败！", err)

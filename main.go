@@ -23,9 +23,14 @@ func REST() {
 	}
 
 	// 第三个参数代表是否为模拟环境，更多信息查看接口说明
-	cli := NewRESTClient("https://www.okex.win", &apikey, true)
-	rsp, err := cli.Get(context.Background(), "/api/v5/account/balance", nil)
+	cli := NewRESTClient("https://www.okex.com", &apikey, false)
+	params := make(map[string]interface{})
+	params["limit"] = 2 //300
+	params["instId"] = "BTC-USDT"
+	params["bar"] = "5m"
+	rsp, err := cli.Get(context.Background(), "/api/v5/market/candles", &params)
 	if err != nil {
+		log.Fatalf("get error %s", err.Error())
 		return
 	}
 
@@ -206,13 +211,13 @@ func wsJrpc() {
 
 func main() {
 	// 公共订阅
-	wsPub()
+	//wsPub()
 
 	// 私有订阅
-	wsPriv()
+	//wsPriv()
 
 	// websocket交易
-	wsJrpc()
+	// wsJrpc()
 
 	// rest请求
 	REST()
