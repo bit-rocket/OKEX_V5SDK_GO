@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -86,6 +87,7 @@ type OrderInfo struct {
 	InstId    string `json:"instId"`
 	InstType  string `json:"instType"`
 	OrdId     string `json:"ordId"`
+	ClOrderId string `json:"clOrdId"`
 	Side      string `json:"side"`
 	Px        string `json:"px"`
 	Sz        string `json:"sz"`
@@ -95,6 +97,40 @@ type OkexV5PendingOrder struct {
 	Code string      `json:"code"`
 	Msg  string      `json:"msg"`
 	Data []OrderInfo `json:"data"`
+}
+
+type TickerInfo struct {
+	InstType string `json:"instType"`
+	InstId   string `json:"instId"`
+	LastStr  string `json:"last"`
+	Last     float64
+	// TODO add full ticker info if needed
+}
+
+func (ti *TickerInfo) StrConv() error {
+	last, err := parseFloat(ti.LastStr)
+	log.Printf("last str %s, parsed last %f, err %v", ti.LastStr, last, err)
+	if err != nil {
+		return err
+	}
+	ti.Last = last
+	return nil
+}
+
+type OkexV5Ticker struct {
+	Code string       `json:"code"`
+	Msg  string       `json:"msg"`
+	Data []TickerInfo `json:"data"`
+}
+
+func (v5ti *OkexV5Ticker) StrConv() error {
+	for idx, _ := range v5ti.Data {
+		if err := v5ti.Data[idx].StrConv(); err != nil {
+			return fmt.Errorf("okex v5 ticker strconv idx %d, error:%s",
+				idx, err.Error())
+		}
+	}
+	return nil
 }
 
 func (bdi *BalanceDetailItem) StrConv() error {
