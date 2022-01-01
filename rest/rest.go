@@ -7,13 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	. "github.com/bit-rocket/OKEX_V5SDK_GO/utils"
+)
+
+const (
+	OKEX_V5_RESP_CODE_OK = "0"
+
+	OKEX_V5_RESP_CODE_INSUFFICIENT_BALANCE = "51008"
 )
 
 type RESTAPI struct {
@@ -53,6 +58,18 @@ type Okexv5APIResponse struct {
 	Data []interface{} `json:"data"`
 }
 
+type OrderFailInfo struct {
+	OrdId   string `json:"ordId"`
+	ClOrdId string `json:"clOrdId"`
+	SCode   string `json:"sCode"`
+	SMsg    string `json:"sMsg"`
+}
+
+type OkexV5ErrorResponse struct {
+	OkexV5Common
+	Data []OrderFailInfo
+}
+
 type BalanceDetailItem struct {
 	Ccy          string `json:"ccy"`
 	AvailBalStr  string `json:"availBal"`
@@ -87,16 +104,56 @@ type OrderInfo struct {
 	InstId    string `json:"instId"`
 	InstType  string `json:"instType"`
 	OrdId     string `json:"ordId"`
-	ClOrderId string `json:"clOrdId"`
+	ClOrdId   string `json:"clOrdId"`
 	Side      string `json:"side"`
-	Px        string `json:"px"`
-	Sz        string `json:"sz"`
+	PxStr     string `json:"px"`
+	SzStr     string `json:"sz"`
+	CTimeStr  string `json:"cTime"`
+
+	Px    float64
+	Sz    float64
+	CTime int64
 }
 
 type OkexV5PendingOrder struct {
-	Code string      `json:"code"`
-	Msg  string      `json:"msg"`
+	OkexV5Common
 	Data []OrderInfo `json:"data"`
+}
+
+func (oi *OrderInfo) StrConv() error {
+	px, err := parseFloat(oi.PxStr)
+	if err != nil {
+		return fmt.Errorf("strconv fill px %s error:%s",
+			oi.PxStr, err.Error())
+	}
+	oi.Px = px
+
+	sz, err := parseFloat(oi.SzStr)
+	if err != nil {
+		return fmt.Errorf("strconv fill sz %s error:%s",
+			oi.SzStr, err.Error())
+	}
+	oi.Sz = sz
+
+	cTime, err := strconv.ParseInt(oi.CTimeStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("strconv ctime %s error:%s",
+			oi.CTimeStr, err.Error())
+	}
+	oi.CTime = cTime
+
+	return nil
+}
+
+func (po *OkexV5PendingOrder) StrConv() error {
+	for idx, _ := range po.Data {
+		if err := po.Data[idx].StrConv(); err != nil {
+			return fmt.Errorf("pending order strconv idx %d error:%s",
+				idx, err.Error())
+		}
+	}
+
+	return nil
 }
 
 type TickerInfo struct {
@@ -107,9 +164,98 @@ type TickerInfo struct {
 	// TODO add full ticker info if needed
 }
 
+type OkexV5Common struct {
+	Code string `json:"code"`
+	Msg  string `json:"msg"`
+}
+
+type OrderFillInfo struct {
+	InstType  string `json:"instType"`
+	InstId    string `json:"instId"`
+	OrdId     string `json:"ordId"`
+	ClOrdId   string `json:"clOrdId"`
+	FillPxStr string `json:"fillPx"`
+	FillSzStr string `json:"fillSz"`
+	Side      string `json:"side"`
+	PosSide   string `json:"posSide"`
+	TsStr     string `json:"ts"`
+	BillId    string `json:"billId"`
+
+	Ts     int64
+	FillPx float64
+	FillSz float64
+}
+
+type OkexV5Fill struct {
+	OkexV5Common
+	Data []OrderFillInfo
+}
+
+type ServerTimeStamp struct {
+	TsStr string `json:"ts"`
+	Ts    int64
+}
+
+type OkexV5ServerTimeStamp struct {
+	OkexV5Common
+	Data []ServerTimeStamp
+}
+
+func (ts *ServerTimeStamp) StrConv() error {
+	tms, err := strconv.ParseInt(ts.TsStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parse int %s error:%s", ts.TsStr, err.Error())
+	}
+	ts.Ts = tms
+	return nil
+}
+
+func (sts *OkexV5ServerTimeStamp) StrConv() error {
+	for idx, _ := range sts.Data {
+		if err := sts.Data[idx].StrConv(); err != nil {
+			return fmt.Errorf("str conv server time error:%s", err.Error())
+		}
+	}
+	return nil
+}
+
+func (fi *OrderFillInfo) StrConv() error {
+	fillPx, err := parseFloat(fi.FillPxStr)
+	if err != nil {
+		return fmt.Errorf("strconv fill px %s error:%s",
+			fi.FillPxStr, err.Error())
+	}
+	fi.FillPx = fillPx
+
+	fillSz, err := parseFloat(fi.FillSzStr)
+	if err != nil {
+		return fmt.Errorf("strconv fill sz %s error:%s",
+			fi.FillSzStr, err.Error())
+	}
+	fi.FillSz = fillSz
+
+	ts, err := strconv.ParseInt(fi.TsStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("strconv ts %s error:%s",
+			fi.TsStr, err.Error())
+	}
+	fi.Ts = ts
+	return nil
+}
+
+func (v5f *OkexV5Fill) StrConv() error {
+	for idx, _ := range v5f.Data {
+		if err := v5f.Data[idx].StrConv(); err != nil {
+			return fmt.Errorf("v5 fill strconv idx %d error:%s",
+				idx, err.Error())
+		}
+	}
+
+	return nil
+}
+
 func (ti *TickerInfo) StrConv() error {
 	last, err := parseFloat(ti.LastStr)
-	log.Printf("last str %s, parsed last %f, err %v", ti.LastStr, last, err)
 	if err != nil {
 		return err
 	}
